@@ -34,3 +34,24 @@ git
 		- 创建一个分支： git branch dev
 		- 切换分支：git checkout dev
 		- 合并分支，切换到master分支执行：git merge dev -m '合并说明'
+		
+		
+	关于远程仓库：
+		- 公开：
+			- github
+			- 码云
+			
+		- 私有，用于公司内部：
+			- gitlab
+			
+		提交代码到远程仓库：
+			- git push origin master
+			- git push origin dev
+		- gitbash生成秘钥
+			- ssh-keygen
+			将id_rsa.pub复制到github的ssh秘钥中即可
+			- 建立远程仓库
+			- 克隆远程仓库到本地：git clone xxx
+			- 本地提交文件到远程仓库：git push origin master
+			
+	
