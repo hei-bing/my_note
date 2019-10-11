@@ -1,0 +1,63 @@
+安装并配置Gitlab
+
+ - 配置yum源
+    清华源地址：https://mirror.tuna.tsinghua.edu.cn/help/gitlab-ce/
+    
+	cat >> gitlab-ce.repo<<EOF
+	[gitlab-ce]
+	name=Gitlab CE Repository
+	baseurl=https://mirrors.tuna.tsinghua.edu.cn/gitlab-ce/yum/el$releasever/
+	gpgcheck=0
+	enabled=1
+	EOF
+
+ - 安装依赖文件
+	sudo yum install curl openssh-server openssh-clients postfix cronie
+	#启动邮箱服务并设置开机自启动
+	sudo service postfix start
+	sudo chkconfig postfix on
+
+
+ - 更新yum缓存库并安装gitlab-ce
+    sudo yum makecache
+    sudo yum install gitlab-ce
+	#设置并启动gitlab
+    sudo gitlab-ctl reconfigure  
+
+ - 配置gitlab访问域名: vim /var/opt/gitlab/nginx/conf/gitlab-http.conf
+	# 外网访问的端口，如果服务器已经有服务器占用了80，那么这里可以改成其它
+    listen *:8888;
+    server_name gitlab.test.domain.com;
+    
+    set $http_host_with_default "gitlab.test.domain.com:8888";
+	
+	补充说明：因为编译gitlab的配置 /etc/gitlab/gitlab.rb 时会重新生成这个自定义nginx 配置，所以只要 gitlab 的配置
+	配得好，上面的nginx其实不需要自定义的。
+    
+ - 修改密码
+    gitlab-rails console production
+    user = User.where(id:1).first
+    user.password='123456'
+    user.save!
+    
+    
+ - GitLab备份和恢复
+    - 备份
+        # 可以将此命令写入crontab，以实现定时备份
+        /usr/bin/gitlab-rake gitlab:backup:create
+    
+        备份的数据会存储在/var/opt/gitlab/backups，用户通过自定义参数 gitlab_rails['backup_path']，改变默认值。
+
+    - 恢复
+        # 停止unicorn和sidekiq，保证数据库没有新的连接，不会有写数据情况
+        sudo gitlab-ctl stop unicorn
+        sudo gitlab-ctl stop sidekiq
+    
+        # 进入备份目录进行恢复，1476900742为备份文件的时间戳
+        cd /var/opt/gitlab/backups
+        gitlab-rake gitlab:backup:restore BACKUP=1476900742
+        cd -
+    
+        # 启动unicorn和sidekiq
+        sudo gitlab-ctl start unicorn
+        sudo gitlab-ctl start sidekiq
