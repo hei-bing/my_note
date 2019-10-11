@@ -24,7 +24,8 @@
 	#设置并启动gitlab
     sudo gitlab-ctl reconfigure  
 
- - 配置gitlab访问域名: vim /var/opt/gitlab/nginx/conf/gitlab-http.conf
+ - 配置gitlab访问域名: 
+	sudo vim /var/opt/gitlab/nginx/conf/gitlab-http.conf
 	# 外网访问的端口，如果服务器已经有服务器占用了80，那么这里可以改成其它
     listen *:8888;
     server_name gitlab.test.domain.com;
@@ -34,10 +35,10 @@
 	补充说明：因为编译gitlab的配置 /etc/gitlab/gitlab.rb 时会重新生成这个自定义nginx 配置，所以只要 gitlab 的配置
 	配得好，上面的nginx其实不需要自定义的。
     
- - 修改密码
+ - 修改密码(需要在gitlab服务启动的情况下)
     gitlab-rails console production
     user = User.where(id:1).first
-    user.password='123456'
+    user.password='12345678'
     user.save!
     
     
@@ -61,3 +62,18 @@
         # 启动unicorn和sidekiq
         sudo gitlab-ctl start unicorn
         sudo gitlab-ctl start sidekiq
+ - 登录gitlab
+	启动服务后，本地hosts文件绑定域名和ip，通过域名访问
+	如：10.10.1.102 my.gitlab.com
+	打开网页后，会出现设置密码的选项，输入8位密码即可。默认用户为root，后续页面操作基本和github一致
+		
+ - GitLab常用命令
+    gitlab-ctl start    		# 启动所有 gitlab 组件；
+    gitlab-ctl stop        		# 停止所有 gitlab 组件；
+    gitlab-ctl restart        	# 重启所有 gitlab 组件；
+    gitlab-ctl status        	# 查看服务状态；
+    vim /etc/gitlab/gitlab.rb   # 修改gitlab配置文件；
+    gitlab-ctl reconfigure      # 重新编译gitlab的配置；
+    gitlab-rake gitlab:check SANITIZE=true --trace    # 检查gitlab；
+    gitlab-ctl tail        		# 查看日志；
+    gitlab-ctl tail nginx/gitlab_access.log
