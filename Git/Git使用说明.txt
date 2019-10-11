@@ -40,8 +40,7 @@ git
 		- 公开：
 			- github
 			- 码云
-			
-		- 私有：
+		- 私有，用于公司内部：
 			- gitlab
 			
 		提交代码到远程仓库：
@@ -52,4 +51,5 @@ git
 			将id_rsa.pub复制到github的ssh秘钥中即可
 			- 建立远程仓库
 			- 克隆远程仓库到本地：git clone xxx
-			- 本地提交文件：git push origin master
+
+			- 本地提交文件到远程仓库：git push origin master
