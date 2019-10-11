@@ -1,0 +1,36 @@
+git
+	版本管理：
+	gitbash下载地址：https://gitforwindows.org
+	
+	- 基本操作
+	
+		- 初始化仓库，进入需要管理的文件夹执行：git init
+		- 查看当前管理状态：git status
+		- 添加文件：	git add . 或git add test.txt
+		- 提交到仓库：	git commit -m '注释内容，切记详细'
+		
+		- 查看日志（如果出现回滚操作，之前的日志将无法显示）：	git log
+		- 版本回滚：	git reset --hard xxxx（版本号）
+		- 查看版本提交记录（所有的提交记录，包括回滚）：git reflog
+		
+		
+	- 当在开发到某个功能到1/2时，如果想回到之前的版本修复BUG，操作流程
+		git stash（仅用于个人，公司的话采用分支策略）
+		修复BUG并提交
+		git stash pop
+		
+		说明：
+			- git stash 将当前工作区所有修改的内容存储到"某个地方"，将工作区还原到当前版本未修改过的状态
+			- git stash list 查看"某个地方"存储的所有记录
+			- git stash clear 清空"某个地方"
+			- git stash pop 将第一个记录从"某个地方"还原到工作区，(可能会有冲突)
+			- git stash apply 编号，将指定编号记录从"某个地方"重新拿到工作区(可能会有冲突)
+			- git stash drop 编号，删除指定编号的记录
+			
+			
+	分支管理：branch
+	
+		- 查看当前属于哪个分支，会在分支名称标记$符号: git branch
+		- 创建一个分支： git branch dev
+		- 切换分支：git checkout dev
+		- 合并分支，切换到master分支执行：git merge dev -m '合并说明'

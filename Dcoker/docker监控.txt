@@ -1,0 +1,64 @@
+docker监控sysdig  轻量级监控
+拉取镜像
+docker pull sysdig/sysdig
+
+运行容器
+docker run -itd --rm --name sysdig --privileged=true 
+--volume=/var/run/docker.sock:/host/var/run/docker.sock 
+--volume=/dev:/host/dev --volume=/proc:/host/proc:ro 
+--volume=/boot:/host/boot:ro 
+--volume=/lib/modules:/host/lib/modules:ro 
+--volume=/usr:/host/usr:ro 
+sysdig/sysdig
+
+启动失败的话 需要安装kernel-devel，然后重新运行 容器
+
+启动成功后，进入容器 输入csysdig可以查看监控项，文本形式
+
+======================================
+docke超好用超直观的监控解决方案scope
+下载
+curl -L git.io/scope -o /usr/local/bin/scope
+增加执行权限
+chmod a+x /usr/local/bin/scope
+
+启动
+scope launch
+点开宿主机的4400端口
+
+
+=================================
+docker监控走势图cAdvisor
+下载
+docker pull google/cAdvisor
+
+docker run --volume=/:/rootfs:ro --volume=/var/run:/var/run:rw --volume=/var/lib/docker:/var/lib/docker:ro --volume=/sys/fs/cgroup:/sys/fs/cgroup:ro -p 8080:8080 --detach=trun --name cadvisor google/cadvisor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

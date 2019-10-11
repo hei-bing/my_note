@@ -1,0 +1,53 @@
+在docker swarm上创建第一个service
+
+docker run 表示在本机上运行一个服务
+
+docker service 表示在集群中运行服务，语法与run命令基本一致
+
+docker service create --name web——server httpd
+
+
+
+副本：期望值副本，在集群中保持不变的副本数量|全局模式副本
+
+
+在docker swarm环境中如何实现service伸缩
+
+docker service scale web_server=5
+
+web_server 表示服务名称
+5表示副本数量
+
+将manager节点驱离到服务列表，manage only 功能
+
+docker node update --availability drain node1
+
+加回到集群运算中
+docker node update --availability active node1
+
+\_ 表示关闭了一个服务
+
+
+如何访问service
+
+1.删除服务
+[root@node-1 ~]# docker service rm web_server
+web_server
+
+2.创建一个服务，指定副本期望值为2
+[root@node-1 ~]# docker service create --name web_server --replicas 2 --networ fsl httpd
+nobtsgbuojpojjhu3flj6d1rr
+overall progress: 2 out of 2 tasks 
+1/2: running   
+2/2: running   
+verify: Service converged 
+
+3.为服务添加端口映射
+[root@node-1 ~]# docker service update --publish-add 8080:80 web_server
+web_server
+overall progress: 2 out of 2 tasks 
+1/2: running   
+2/2: running   
+verify: Service converged 
+备注：也可以在启动服务的时候直接添加
+

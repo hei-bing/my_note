@@ -1,0 +1,124 @@
+docker swarm 基于主机创建集群
+至少3台
+步骤
+规划主机名
+比如node1，node2，node3
+规划hostname文件
+192.168.1.100 node1
+192.168.1.101 node2
+192.168.1.102 node3
+
+
+ssh-keygen
+免秘钥登录
+
+配置路由转发
+/etc/sysctl.conf默认追加一下内容
+net.ipv4.ip_forward = 1
+使配置生效
+[root@node-1 ~]# sysctl -p
+net.ipv4.ip_forward = 1
+将配置发送至其他节点
+[root@node-1 ~]# ansible -m copy -a "src=/etc/sysctl.conf dest=/etc/sysctl.conf" docker-swarm
+[root@node-1 ~]# ansible -m command -a "sysctl -p" docker-swarm
+
+
+
+swarm初始化
+
+[root@node-1 ~]# docker swarm init --advertise-addr 192.168.112.128
+Swarm initialized: current node (5blg2y2ffp4eyhi1b8zqgaqms) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-31pe9r40vigzh68jmavlncx9hkgrqhuvsszsai7jf3yu2pi9vm-am5oq69ucndn6gd60z202pxv6 192.168.112.128:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+#查看docker信息
+docker info
+
+
+#查看swarm节点信息，只能manager端
+docker node ls
+当集群中存在多个manager的时候， 会自动选出一个leader作为主节点
+
+
+docker swarm节点提权or降权，用于节点资源占用过高或过低时使用
+#提权 promote
+[root@node-1 ~]# docker node promote node-3
+Node node-3 promoted to a manager in the swarm.
+#降权 demote
+[root@node-1 ~]# docker node demote node-3
+Manager node-3 demoted in the swarm.
+
+#搭建本地私有仓库
+拉取镜像
+[root@node-1 ~]# docker pull registry:2
+2: Pulling from library/registry
+c87736221ed0: Pull complete 
+1cc8e0bb44df: Pull complete 
+54d33bcb37f5: Pull complete 
+e8afc091c171: Pull complete 
+b4541f6d3db6: Pull complete 
+Digest: sha256:8004747f1e8cd820a148fb7499d71a76d45ff66bac6a29129bfdbfdc0154d146
+Status: Downloaded newer image for registry:2
+docker.io/library/registry:2
+创建本地目录
+[root@node-1 ~]# mkdir -p /opt/data/registry
+启动容器
+[root@node-1 ~]# docker run -itd -p 5000:5000 --restart always -v /opt/data/registry:/var/lib/registry --name registry registry:2
+964665c2fba164b35dbd9e9b0a35451aba5a99d4371829274e3444cd6d80a4ca
+
+查看当前私有仓库内数据
+[root@node-1 registry]# curl 192.168.112.128:5000/v2/_catalog
+{"repositories":[]}
+
+修改docker配置，连接私有仓库
+在service模块下，追加-insecure-registry 192.168.112.128:5000
+保存后并将配置发送至其他节点
+[root@node-1 registry]# ansible -m copy -a "src=/usr/lib/systemd/system/docker.service dest=/usr/lib/systemd/system/docker.service" docker-swarm
+
+重新读取进程内容
+[root@node-1 registry]# systemctl daemon-reload
+重启docker
+[root@node-1 registry]# systemctl restart docker
+其他节点同样执行
+[root@node-1 registry]# ansible -m command -a "systemctl daemon-reload" docker-swarm
+[root@node-1 registry]# ansible -m command -a "systemctl restart docker" docker-swarm
+
+修改镜像tag
+[root@node-1 registry]# docker tag httpd:latest 192.168.112.128:5000/httpd
+上传镜像到私有仓库
+[root@node-1 registry]# docker push 192.168.112.128:5000/httpd
+查看仓库数据
+[root@node-1 registry]# curl 192.168.112.128:5000/v2/_catalog
+{"repositories":["httpd"]}
+
+创建网络
+[root@node-1 ~]# docker network create --driver overlay docker-swarm
+pltfhy0fe3l9o49rdatmw8dhp
+[root@node-1 ~]# docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+8e13b989f0e6        bridge              bridge              local
+pltfhy0fe3l9        docker-swarm        overlay             swarm
+3a7cea779dde        docker_gwbridge     bridge              local
+994ea00c332e        host                host                local
+u7appjs9z3rz        ingress             overlay             swarm
+1cb445a2aede        none  
+
+
+安装图形界面
+拉取镜像
+[root@node-1 ~]# docker pull dockersamples/visualizer
+修改tag标签
+[root@node-1 ~]# docker tag dockersamples/visualizer 192.168.112.128:5000/visualizer
+上传到本地私有仓库
+[root@node-1 ~]# docker push 192.168.112.128:5000/visualizer
+
+启动容器
+[root@node-1 ~]# docker run -itd -p 8888:8080 -e host=192.168.112.128 -e PORT=8080 -v /var/run/docker.sock:/var/run/docker.sock --name visualizer 192.168.112.128:5000/visualizer
+
+
+
+

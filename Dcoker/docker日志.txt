@@ -1,0 +1,62 @@
+docker 日志及elk
+
+默认容器日志位置：
+/var/lib/docker/containers/*/*-json.log
+
+
+指定log驱动器
+docker run -it --log-driver none alpine ash
+
+摘自官方文档https://docs.docker.com/config/containers/logging/configure/
+Driver 			Description
+none 			No logs are available for the container and docker logs does not return any output.
+local 			Logs are stored in a custom format designed for minimal overhead.
+json-file 		The logs are formatted as JSON. The default logging driver for Docker.
+syslog 			Writes logging messages to the syslog facility. The syslog daemon must be running on the host machine.
+journald 		Writes log messages to journald. The journald daemon must be running on the host machine.
+gelf 			Writes log messages to a Graylog Extended Log Format (GELF) endpoint such as Graylog or Logstash.
+fluentd 		Writes log messages to fluentd (forward input). The fluentd daemon must be running on the host machine.
+awslogs 		Writes log messages to Amazon CloudWatch Logs.
+splunk 			Writes log messages to splunk using the HTTP Event Collector.
+etwlogs 		Writes log messages as Event Tracing for Windows (ETW) events. Only available on Windows platforms.
+gcplogs 		Writes log messages to Google Cloud Platform (GCP) Logging.
+logentries 		Writes log messages to Rapid7 Logentries.
+
+
+
+Logstash  		日志收集
+Elasticsearch	全局索引
+Kibana			效果展示
+
+通过docker安装ELK
+sebp/elk
+
+安装前准备工作
+1.至少4个G的内存 A minimum of 4GB RAM assigned to Docker
+Elasticsearch alone needs at least 2GB of RAM to run.
+2.A limit on mmap counts equal to 262,144 or more
+3.Access to TCP port 5044 from log-emitting clients
+
+安装过程
+docker pull sebp/elk
+docker run -p 5601:5601 -p 9200:9200 -p 5044:5044 -itd -e ES_HEAP_SIZE="2g" -e LS_HEAP_SIZE="1G" --name elk sebp/elk
+
+ps：
+    5601 (Kibana web interface).
+    9200 (Elasticsearch JSON interface).
+    5044 (Logstash Beats interface, receives logs from Beats such as Filebeat – see the Forwarding logs with Filebeat section).
+
+Running the container using Docker Compose 
+If you're using Docker Compose to manage your Docker services (and if not you really should as it will make your life much easier!), then you can create an entry for the ELK Docker image by adding the following lines to your docker-compose.yml file:
+
+elk:
+  image: sebp/elk
+  ports:
+    - "5601:5601"
+    - "9200:9200"
+    - "5044:5044"
+
+You can then start the ELK container like this:
+
+$ sudo docker-compose up elk
+
