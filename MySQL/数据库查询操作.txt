@@ -1,0 +1,3 @@
+查询所有库的存储过程
+show procedure status;
+

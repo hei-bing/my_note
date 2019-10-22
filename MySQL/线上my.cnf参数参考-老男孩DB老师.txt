@@ -1,0 +1,95 @@
+线上my.cnf的配置文件，机器是48G内存，12*15K 300GSAS机器，DELL R510。
+可以参考，不同的配置设置不一样，所以建议拿去仅作参考。
+
+# MySQL configure file.
+# MySQL_version 5.5.12
+# Version 1.1
+# Date    2011-05-15
+
+# The MySQL server
+[mysqld]
+port                            = 4714
+user                            = my4714
+datadir                         = /data1/mysql4714
+tmpdir                          = /dev/shm
+slave-load-tmpdir               = /tmp
+socket                          = /tmp/mysql4714.sock
+key_buffer_size                 = 64M
+max_allowed_packet              = 16M
+table_cache                     = 2048
+join_buffer_size                = 16M
+sort_buffer_size                = 16M
+read_buffer_size                = 16M
+read_rnd_buffer_size            = 32M
+myisam_sort_buffer_size         = 128M
+query_cache_size                = 256M
+query_cache_limit               = 8M
+query_cache_type                = off
+max_tmp_tables                  = 256
+tmp_table_size                  = 128M
+max_heap_table_size             = 128M
+thread_cache                    = 64
+thread_concurrency              = 32
+max_connect_errors              = 99999999
+slow-query-log                  = 1
+slow-query-log-file             = slow.log
+back_log                        = 600
+myisam_repair_threads           = 1
+myisam-recover                  = DEFAULT
+expire_logs_days                = 10
+interactive_timeout             = 28800
+wait_timeout                    = 28800
+
+#old_passwords=1
+skip-slave-start
+skip-name-resolve
+max_user_connections   = 8000
+max_connections   = 8096
+character-set-server   = utf8
+read_only = 0
+log-slave-updates = 1
+#-------------    innodb  --------------
+innodb_file_format              = Barracuda
+default-storage-engine          = InnoDB
+innodb_buffer_pool_size         = 4G
+innodb_additional_mem_pool_size = 32M
+innodb_data_file_path           = ibdata1:100M:autoextend
+innodb_flush_log_at_trx_commit  = 0
+innodb_log_buffer_size          = 8M
+innodb_log_file_size            = 1300M
+innodb_log_files_in_group       = 3
+innodb_max_dirty_pages_pct      = 90
+innodb_lock_wait_timeout        = 20
+innodb_file_per_table           = 1
+innodb_flush_method             = O_DIRECT
+innodb_support_xa               = 0
+innodb_io_capacity              = 500
+innodb_buffer_pool_instances    = 4
+replicate_wild_ignore_table = status_%.status_09%
+replicate_wild_ignore_table = status_%.status_10%
+replicate_wild_ignore_table = status_%.status_12%
+
+
+server-id                    = 112014714
+log-bin                         = mysql-bin
+relay-log                       = relay-bin
+log-error                       = error.log
+
+
+
+#new cnf by auto rebuild
+slow_query_log_file             = slow.log
+
+[client]
+user                            = xxxxxx
+password                        = xxxxxxx
+port                            = 4714
+socket                          = /tmp/mysql4714.sock
+no-auto-rehash
+character_set_client            = utf8
+
+[myisamchk]
+key_buffer_size                 = 64M
+sort_buffer_size                = 32M
+read_buffer                     = 16M
+write_buffer                    = 16M

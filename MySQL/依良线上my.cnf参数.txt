@@ -1,0 +1,75 @@
+[client]
+port = 7000
+socket = /tmp/mysql.sock
+
+[mysqld]
+port = 7000
+socket = /tmp/mysql.sock
+datadir= /dbdata/data
+basedir= /usr/local/mysql
+pid-file= /dbdata/data/mysqld_7000.pid
+log-error= /dbdata/data/mysqld_7000.log
+
+skip-name-resolve
+skip-host-cache
+character_set_server=utf8
+
+max_allowed_packet = 16M
+table_cache = 2048
+sort_buffer_size = 4M
+read_buffer_size = 16M
+query_cache_size = 32M
+query_cache_limit = 8M
+read_rnd_buffer_size = 32M
+myisam_sort_buffer_size = 128M
+tmp_table_size = 128M
+
+sync_binlog = 0
+binlog_format = ROW
+binlog_cache_size =4M
+log-slave-updates=1
+log-bin=mysql-bin
+expire_logs_days=10
+max_connections=8096
+max_user_connections=8000
+max_connect_errors=99999999
+slow_query_log=on
+slow-query-log-file=slow.log
+long_query_time = 5
+skip-federated
+server-id= 4
+
+
+default-storage-engine=InnoDB
+innodb_data_file_path = ibdata1:100M:autoextend
+innodb_file_per_table = 1
+innodb_buffer_pool_size = 50G
+innodb_buffer_pool_instances = 5
+innodb_additional_mem_pool_size = 32M
+innodb_log_files_in_group = 2
+innodb_log_file_size = 1G
+innodb_log_buffer_size = 8M
+innodb_flush_log_at_trx_commit = 0
+innodb_table_locks =0
+transaction-isolation=READ-COMMITTED
+innodb_doublewrite=0
+innodb_flush_method=O_DIRECT
+log_bin_trust_function_creators=1
+innodb_lock_wait_timeout=50
+
+
+[mysqldump]
+quick
+max_allowed_packet = 16M
+
+[mysql]
+no-auto-rehash
+
+[myisamchk]
+key_buffer_size = 64M
+sort_buffer_size = 32M
+read_buffer = 16M
+write_buffer = 16M
+
+[mysqlhotcopy]
+interactive-timeout

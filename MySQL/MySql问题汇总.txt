@@ -1,0 +1,2 @@
+error.logÖĞ´íÎó
+1. Got an error reading communication packets

@@ -1,0 +1,171 @@
+﻿DBMS优势：
+	数据管理独立性；
+	有效地完成数据存取；
+	数据完整性和安全性；
+	数据集中管理；
+	并发存储与故障恢复；
+	减少应用程序开发时间；
+
+DBMS的基本功能：
+
+MySQL社区版：
+MySQL企业版：
+
+MySQL官方提供的软件包格式
+	软件包管理器特有的格式：rpm包，msi包，exe等
+	通用二进制格式：免安装的
+	源程序：
+
+MySQL的初始化
+	创建mysql库
+
+数据库连接
+Linux连接本地 socket。连接远程主机tcp/ip协议
+windows mem
+
+mysql客户端
+	交互式模式
+	批处理模式
+		执行mysql脚本
+交互式模式中的命令模式
+	客户端命令
+	服务器端命令
+		都必须使用乬结束符，默认为分好；
+
+关系型数据库对象：
+	表
+	索引
+	视图
+	约束
+	存储过程
+	储存函数
+	触发器
+	游标
+	用户
+
+	事务
+    
+表
+	行，列
+	表，实体
+		行：row
+		列：field，column
+          
+字段名称：数据类型，类型修饰（约束，限制）
+	字符
+		CHAR(n)
+		VARCHAR(n)结束修饰符
+		BINARY(n)
+		VARBINARY(n)（可变二进制参数，区分大小写）
+		TEXT(n)
+		BLOB(n)(二进制大对象)
+	数值
+		精确数值
+			整形
+				TINYINT(1个字节)
+				SMALLINT(2个字节)
+				MEDIUMINT(3个字节)
+				INT（4个字节）
+				BIGINT(8个字节)
+				修饰符：UNSIGNED 无符号
+						NOT NULL 非空
+			十进制
+		近似数值
+			浮点型
+				FLOAT
+				DOUBLE
+	日期时间
+		DATE
+		TIME
+		DATETIME
+		STAMP
+	布尔
+	内置类型：ENUM
+	
+DDL
+	CREATE
+	ALTER
+	DROP
+DHL
+	INSERT
+	UPDATE
+	DELETE
+DCL
+	GRANT
+	REVOKE
+	
+创建数据库：
+	CREATE DATABASES db_name；
+	CREATE DATABASES IF NOT EXISTS db_name；
+	
+删除数据库：
+	DROP DATABASES db_name；
+	
+创建表：
+	CREATE TABLE
+	查看库中的表：SHOW TABLES FROM db_name；
+	查看表结构：DESC tb_name;
+	
+	删除表：DROP TABLE tb_name;
+
+修改表：
+	ALTER TABLE tb_name
+		MODIFY
+		CHANGE
+		ADD
+		DROP
+		
+实现数据修改：
+	INSERT INFO 
+	REPLACEINFO
+	
+	INSERT 可以批量插入文件
+	
+选择和投影
+	选择：指定以某字段或某些字段作为搜索码，与某值比较，做逻辑运算，筛选符合条件的行
+		WHERE 指定选择条件，大于，等于，小于,没有条件选择所有行
+		SELECT 字段 FROM tb_name WHERE CONDITION；
+	投影：根据需要选择字段
+	
+创建用户
+	CREATE USER 'USERNAME'@'HOST' INDETIFIED BY 'PASSWDOR';
+	DROP USER 'USERNAME'@'HOST';
+	
+	HOST
+		IP:
+		HOSTNAME:
+		NETWORK:
+		通配符：
+			_:匹配任意单个字符：172.16.0.__  表示10-99
+			%:匹配任意字符
+
+DCL:
+	创建用户并赋予权限：
+	GRANT pril（权限） ON db_name.tb_name TO 'USERNAME'@'HOST' BY INDETIFIED 'PASSWDOR';
+	移除用户权限：
+	REVOKE pril（权限） ON db_name.tb_name FROM 'USERNAME'@'HOST';
+	查看用户权限：
+	SHOW CREATE FOR 'USERNAME'@'HOST';
+	所有权限：
+	ALL PRIVILEGES
+			
+			
+INT A-10
+CHAR A-10
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,80 @@
+查看标的默认属性
+desc 表名
+如：
+mysql> desc wallet;
++------------------+------------------+------+-----+---------+-------+
+| Field            | Type             | Null | Key | Default | Extra |
++------------------+------------------+------+-----+---------+-------+
+| uid              | int(10) unsigned | NO   | PRI | NULL    |       |
+| money            | int(10) unsigned | NO   |     | 5000    |       |
+| hunyu            | int(10) unsigned | NO   |     | 0       |       |
+| rmb              | int(10)          | YES  |     | 5000    |       |
+| fame             | int(5) unsigned  | NO   |     | 0       |       |
+| jianghun         | int(5) unsigned  | NO   |     | 0       |       |
+| gangcontribution | int(10) unsigned | NO   |     | 0       |       |
+| meiyuan          | int(10)          | NO   |     | NULL    |       |
++------------------+------------------+------+-----+---------+-------+
+8 rows in set (0.01 sec)
+修改表的默认属性
+alter table 表名 modify 字段名 新属性。
+如：
+ords: 0  Duplicates: 0  Warnings: 0
+
+mysql> desc wallet;
++------------------+------------------+------+-----+---------+-------+
+| Field            | Type             | Null | Key | Default | Extra |
++------------------+------------------+------+-----+---------+-------+
+| uid              | int(10) unsigned | NO   | PRI | NULL    |       |
+| money            | int(10) unsigned | NO   |     | 5000    |       |
+| hunyu            | int(10) unsigned | NO   |     | 0       |       |
+| rmb              | int(10)          | YES  |     | 1000    |       |
+| fame             | int(5) unsigned  | NO   |     | 0       |       |
+| jianghun         | int(5) unsigned  | NO   |     | 0       |       |
+| gangcontribution | int(10) unsigned | NO   |     | 0       |       |
+| meiyuan          | int(10)          | NO   |     | NULL    |       |
++------------------+------------------+------+-----+---------+-------+
+8 rows in set (0.00 sec)
+
+rmb默认属性由5000修改为1000.
+
+为表添加字段
+alter table 表明 add 字段名 字段属性。
+如：
+mysql> alter table wallet add yingbang int(10) not null;
+mysql> desc wallet;
++------------------+------------------+------+-----+---------+-------+
+| Field            | Type             | Null | Key | Default | Extra |
++------------------+------------------+------+-----+---------+-------+
+| uid              | int(10) unsigned | NO   | PRI | NULL    |       |
+| money            | int(10) unsigned | NO   |     | 5000    |       |
+| hunyu            | int(10) unsigned | NO   |     | 0       |       |
+| rmb              | int(10)          | YES  |     | 1000    |       |
+| fame             | int(5) unsigned  | NO   |     | 0       |       |
+| jianghun         | int(5) unsigned  | NO   |     | 0       |       |
+| gangcontribution | int(10) unsigned | NO   |     | 0       |       |
+| meiyuan          | int(10)          | NO   |     | NULL    |       |
+| yingbang         | int(10)          | NO   |     | NULL    |       |
++------------------+------------------+------+-----+---------+-------+
+9 rows in set (0.00 sec)
+
+删除表字段
+alter table 表名 drop 字段名
+如：
+mysql> alter table wallet drop yingbang ;
+Query OK, 0 rows affected (0.01 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+
+mysql> desc wallet ;
++------------------+------------------+------+-----+---------+-------+
+| Field            | Type             | Null | Key | Default | Extra |
++------------------+------------------+------+-----+---------+-------+
+| uid              | int(10) unsigned | NO   | PRI | NULL    |       |
+| money            | int(10) unsigned | NO   |     | 5000    |       |
+| hunyu            | int(10) unsigned | NO   |     | 0       |       |
+| rmb              | int(10)          | YES  |     | 1000    |       |
+| fame             | int(5) unsigned  | NO   |     | 0       |       |
+| jianghun         | int(5) unsigned  | NO   |     | 0       |       |
+| gangcontribution | int(10) unsigned | NO   |     | 0       |       |
+| meiyuan          | int(10)          | NO   |     | NULL    |       |
++------------------+------------------+------+-----+---------+-------+
+8 rows in set (0.01 sec)

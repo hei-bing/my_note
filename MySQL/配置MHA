@@ -1,0 +1,417 @@
+MHA MySQL高可用搭建
+
+1.环境说明
+OS：CentOS Linux release 7.6.1810 (Core) 
+MySQL：mysql-5.7.27
+mha:0.58
+
+2.准备工作：
+配置mysql主从：1主2从
+grant replication slave on *.* to 'repl'@'10.10.1.%' identified by '123456';
+
+CHANGE MASTER TO 
+MASTER_HOST='10.10.1.100',
+MASTER_USER='repl',
+MASTER_PASSWORD='123456',
+MASTER_PORT=3306,
+MASTER_AUTO_POSITION=1;
+
+配置关键文件软连接
+ln -s /usr/local/mysql/bin/mysqlbinlog    /usr/bin/mysqlbinlog
+ln -s /usr/local/mysql/bin/mysql          /usr/bin/mysql
+
+配置各节点互信
+db01：
+rm -rf /root/.ssh 
+ssh-keygen
+cd /root/.ssh 
+cp id_rsa.pub authorized_keys
+scp  -r  /root/.ssh  10.10.1.101:/root 
+scp  -r  /root/.ssh  10.10.1.102:/root 
+各节点验证
+db01:
+ssh 10.10.1.100 date
+ssh 10.10.1.101 date
+ssh 10.10.1.102 date
+db02:
+ssh 10.10.1.100 date
+ssh 10.10.1.101 date
+ssh 10.10.1.102 date
+db03:
+ssh 10.10.1.100 date
+ssh 10.10.1.101 date
+ssh 10.10.1.102 date
+
+3.安装依赖文件：
+yum install perl-DBD-MySQL -y
+
+4.安装mha节点工具
+rpm -ivh mha4mysql-node-0.58-0.el7.centos.noarch.rpm
+
+5.在主库中配置mha需要的用户
+grant all privileges on *.* to mha@'10.10.1.%' identified by 'mha';
+flush privileges;
+
+6.在manage节点安装依赖文件
+yum install -y perl-Config-Tiny epel-release perl-Log-Dispatch perl-Parallel-ForkManager perl-Time-HiRes
+7.安装mha管理软件manager
+
+8.管理节点配置文件准备
+创建配置文件目录
+mkdir -p /etc/mha
+创建日志目录
+mkdir -p /var/log/mha/app1
+编辑mha配置文件
+vim /etc/mha/app1.cnf
+[server default]
+manager_log=/var/log/mha/app1/manager        
+manager_workdir=/var/log/mha/app1            
+master_binlog_dir=/data/binlog
+ping_interval=1       
+user=mha                                   
+password=mha                               
+ping_interval=2
+repl_password=123
+repl_user=repl
+ssh_user=root   
+
+#MySQL集群配置                            
+[server1]                                   
+hostname=10.10.1.100
+port=3306                                  
+[server2]            
+hostname=10.10.1.101
+port=3306
+[server3]
+hostname=10.10.1.102
+port=3306
+#vip脚本配置
+master_ip_failover_script=/usr/local/bin/master_ip_failover
+
+9.节点互信检查
+masterha_check_ssh  --conf=/etc/mha/app1.cnf 
+10.主从状态检查
+masterha_check_repl  --conf=/etc/mha/app1.cnf
+
+11.开启MHA
+nohup masterha_manager --conf=/etc/mha/app1.cnf --remove_dead_master_conf --ignore_last_failover  < /dev/null> /var/log/mha/app1/manager.log 2>&1 &
+
+12.检查MHA状态
+masterha_check_status --conf=/etc/mha/app1.cnf
+
+13.检查MySQL各节点
+mysql -umha -pmha -h 10.10.1.100 -e "show variables like 'server_id'"
+mysql -umha -pmha -h 10.10.1.101 -e "show variables like 'server_id'"
+mysql -umha -pmha -h 10.10.1.102 -e "show variables like 'server_id'"
+
+14.模拟故障切换
+[root@node-master data]# /etc/init.d/mysql-3306.server stop
+查看MHA日志，观察切换过程，等待completed successfully.进行后续操作
+'''
+Started automated(non-interactive) failover.
+Invalidated master IP address on 10.10.1.101(10.10.1.101:3306)
+Selected 10.10.1.100(10.10.1.100:3306) as a new master.
+10.10.1.100(10.10.1.100:3306): OK: Applying all logs succeeded.
+10.10.1.100(10.10.1.100:3306): OK: Activated master IP address.
+10.10.1.102(10.10.1.102:3306): OK: Slave started, replicating from 10.10.1.100(10.10.1.100:3306)
+10.10.1.100(10.10.1.100:3306): Resetting slave info succeeded.
+Master failover to 10.10.1.100(10.10.1.100:3306) completed successfully.
+'''
+
+主从完成切换后，启动故障主机，根据MHA中的日志记录，重新初始化故障主机的主从信息。开启同步
+然后将故障主机的信息重新写入到MHA的配置文件，启动MHA
+
+15.配置MHA vip
+cat >> /etc/mah/master_ip_failover<<EOF
+#!/usr/bin/env perl
+
+#  Copyright (C) 2011 DeNA Co.,Ltd.
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by：
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#  Foundation, Inc.,
+#  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+## Note: This is a sample script and is not complete. Modify the script based on your environment.
+
+use strict;
+use warnings FATAL => 'all';
+
+use Getopt::Long;
+use MHA::DBHelper;
+
+my (
+  $command,        $ssh_user,         $orig_master_host,
+  $orig_master_ip, $orig_master_port, $new_master_host,
+  $new_master_ip,  $new_master_port,  $new_master_user,
+  $new_master_password
+);
+
+my $vip = '192.168.4.60/24';  # Virtual IP 
+my $key = "1"; 
+my $ssh_start_vip = "/sbin/ifconfig eth0:$key $vip";
+my $ssh_stop_vip = "/sbin/ifconfig eth0:$key down";
+
+GetOptions(
+  'command=s'             => \$command,
+  'ssh_user=s'            => \$ssh_user,
+  'orig_master_host=s'    => \$orig_master_host,
+  'orig_master_ip=s'      => \$orig_master_ip,
+  'orig_master_port=i'    => \$orig_master_port,
+  'new_master_host=s'     => \$new_master_host,
+  'new_master_ip=s'       => \$new_master_ip,
+  'new_master_port=i'     => \$new_master_port,
+  'new_master_user=s'     => \$new_master_user,
+  'new_master_password=s' => \$new_master_password,
+);
+
+exit &main();
+
+sub main {
+  if ( $command eq "stop" || $command eq "stopssh" ) {
+
+    # $orig_master_host, $orig_master_ip, $orig_master_port are passed.
+    # If you manage master ip address at global catalog database,
+    # invalidate orig_master_ip here.
+    my $exit_code = 1;
+    eval {
+
+      # updating global catalog, etc
+      &stop_vip();
+      $exit_code = 0;
+    };
+    if ($@) {
+      warn "Got Error: $@\n";
+      exit $exit_code;
+    }
+    exit $exit_code;
+  }
+  elsif ( $command eq "start" ) {
+
+    # all arguments are passed.
+    # If you manage master ip address at global catalog database,
+    # activate new_master_ip here.
+    # You can also grant write access (create user, set read_only=0, etc) here.
+    my $exit_code = 10;
+    eval {
+      my $new_master_handler = new MHA::DBHelper();
+
+      # args: hostname, port, user, password, raise_error_or_not
+      $new_master_handler->connect( $new_master_ip, $new_master_port,
+        $new_master_user, $new_master_password, 1 );
+
+      ## Set read_only=0 on the new master
+      $new_master_handler->disable_log_bin_local();
+      print "Set read_only=0 on the new master.\n";
+      $new_master_handler->disable_read_only();
+
+      ## Creating an app user on the new master
+      print "Creating app user on the new master..\n";
+      $new_master_handler->enable_log_bin_local();
+      $new_master_handler->disconnect();
+
+      ## Update master ip on the catalog database, etc
+      &start_vip();
+      $exit_code = 0;
+    };
+    if ($@) {
+      warn $@;
+
+      # If you want to continue failover, exit 10.
+      exit $exit_code;
+    }
+    exit $exit_code;
+  }
+  elsif ( $command eq "status" ) {
+
+    # do nothing
+    exit 0;
+  }
+  else {
+    &usage();
+    exit 1;
+  }
+}
+sub start_vip() {
+    `ssh $ssh_user\@$new_master_host \" $ssh_start_vip \"`;
+}
+sub stop_vip() {
+    return 0 unless ($ssh_user);
+    `ssh $ssh_user\@$orig_master_host \" $ssh_stop_vip \"`;
+}
+
+sub usage {
+  print
+"Usage: master_ip_failover --command=start|stop|stopssh|status --orig_master_host=host --orig_master_ip=ip --orig_master_port=port --new_master_host=host --new_master_ip=ip --new_master_port=port\n";
+}
+EOF
+#授权可执行
+chmod +x /usr/local/bin/master_ip_failover 
+#手动在主库上创建VIP
+ifconfig ens33:1 10.10.1.50/24
+#重启MHA
+masterha_stop --conf=/etc/mha/app1.cnf
+nohup masterha_manager --conf=/etc/mha/app1.cnf --remove_dead_master_conf --ignore_last_failover < /dev/null > /var/log/mha/app1/manager.log 2>&1 &
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2.4.13 邮件提醒
+1. 参数：
+report_script=/usr/local/bin/send
+2. 准备邮件脚本
+send_report
+(1)准备发邮件的脚本(上传 email_2019-最新.zip中的脚本，到/usr/local/bin/中)
+(2)将准备好的脚本添加到mha配置文件中,让其调用
+
+3. 修改manager配置文件，调用邮件脚本
+vi /etc/mha/app1.cnf
+report_script=/usr/local/bin/send
+
+（3）停止MHA
+masterha_stop --conf=/etc/mha/app1.cnf
+（4）开启MHA    
+nohup masterha_manager --conf=/etc/mha/app1.cnf --remove_dead_master_conf --ignore_last_failover < /dev/null > /var/log/mha/app1/manager.log 2>&1 &
+        
+(5) 关闭主库,看警告邮件  
+故障修复：
+1. 恢复故障节点
+（1）实例宕掉
+/etc/init.d/mysqld start 
+（2）主机损坏，有可能数据也损坏了
+备份并恢复故障节点。
+2.恢复主从环境
+看日志文件：
+CHANGE MASTER TO MASTER_HOST='10.0.0.52', MASTER_PORT=3306, MASTER_AUTO_POSITION=1, MASTER_USER='repl', MASTER_PASSWORD='123';
+start slave ;
+3.恢复manager
+3.1 修好的故障节点配置信息，加入到配置文件
+[server1]
+hostname=10.0.0.51
+port=3306
+3.2 启动manager   
+nohup masterha_manager --conf=/etc/mha/app1.cnf --remove_dead_master_conf --ignore_last_failover < /dev/null > /var/log/mha/app1/manager.log 2>&1 &
+2.4.14 binlog server（db03）
+参数：
+binlogserver配置：
+找一台额外的机器，必须要有5.6以上的版本，支持gtid并开启，我们直接用的第二个slave（db03）
+vim /etc/mha/app1.cnf 
+[binlog1]
+no_master=1
+hostname=10.0.0.53
+master_binlog_dir=/data/mysql/binlog
+创建必要目录
+mkdir -p /data/mysql/binlog
+chown -R mysql.mysql /data/*
+修改完成后，将主库binlog拉过来（从000001开始拉，之后的binlog会自动按顺序过来）
+拉取主库binlog日志
+cd /data/mysql/binlog     -----》必须进入到自己创建好的目录
+mysqlbinlog  -R --host=10.0.0.52 --user=mha --password=mha --raw  --stop-never mysql-bin.000001 &
+注意：
+拉取日志的起点,需要按照目前从库的已经获取到的二进制日志点为起点
+
+重启MHA
+masterha_stop --conf=/etc/mha/app1.cnf
+nohup masterha_manager --conf=/etc/mha/app1.cnf --remove_dead_master_conf --ignore_last_failover < /dev/null > /var/log/mha/app1/manager.log 2>&1 &
+故障处理
+主库宕机，binlogserver 自动停掉，manager 也会自动停止。
+处理思路：
+1、重新获取新主库的binlog到binlogserver中
+2、重新配置文件binlog server信息
+3、最后再启动MHA
+3.管理员在高可用架构维护的职责
+1. 搭建：MHA+VIP+SendReport+BinlogServer
+2. 监控及故障处理
+3.  高可用架构的优化
+ 核心是：尽可能降低主从的延时，让MHA花在数据补偿上的时间尽量减少。
+5.7 版本，开启GTID模式，开启从库SQL并发复制。 
+  
+wwwoldguocom
+拥有477钻 (约53.24元)
+"小礼物走一走，来简书关注我"
+
+写下你的评论...
+全部评论
+3
+
+DearXin
+3楼 07.25 17:56
+老师，请教您一个问题: PXC集群是percona提供的，Galera集群是Mariadb提供的，那MySQL官方版本能使用这两个集群方案吗
+
+qq_412445773
+2楼 05.14 11:58
+请教老师这样的一个问题，
+对于mhaManager机器来说，它必须将mha配置为一个开机自启动的服务，
+这个如何做？
+谢谢:smiley:
+
+wwwoldguocom
+05.15 11:20
+@qq_412445773 自己写脚本:sweat:
+被以下专题收入，发现更多相似内容
+
+mysql
+
+mysql
+
+mysql基础笔记
+
+集群技术
+推荐阅读
+更多精彩内容
+MHA构建MySQL高可用平台最佳实践
+文/Bruce.Liu1 文章大纲MHA简介1.1. mha组件介绍1.2. 背景和目标MHA原理2.1. MHA...
+
+BruceLiu1
+Mysql +MHA+LVS+KEEPALIVED高可用，读写分离，负载均衡(学习笔记十七)
+http://blog.sina.com.cn/s/blog_166c0ec620102wz03.html 一、M...
+
+SkTj
+MySQL基于MHA高可用理论篇
+MySQL高可用系统 MySQL高可用，顾名思义就是当MySQL主机或服务发生任何故障时能够立马有其他主机顶替其工...
+
+张伟科
+mysql备份、复制、MHA配置
+1、简述mysql常用备份方式及备份工具并举例 备份类型:备份的数据的集范围完全备份和部分备份完全备份: 整个数据...
+
+佐岸的咖啡
+MySQLMHA高可用环境搭建
+MySQLMHA高可用环境搭建 简介： MHA（Master High Availability）目前在MySQ...
+
+cubotudo
+广告
+
+wwwoldguocom
+拥有477钻 (约53.24元)
+中级DBA就业指导锦囊
+阅读 392
+第一章 作为DBA的前提
+阅读 681
+MySQL DBA专家课程框架
+阅读 695
+精彩继续
+姚晨微博公开谈性：中国女人活得到底有多压抑？
+阅读 3288
+
+她83岁，站街60年，只为等一个永远等不到的客人...
+阅读 3545

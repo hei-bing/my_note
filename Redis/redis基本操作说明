@@ -1,0 +1,53 @@
+redis 总结
+
+1、可存储的数据类型
+	- string 字符串类型
+	- hash_map   哈希
+	- list   数据or列表
+	- set	集合
+	- zset  有序集合
+	
+2、管理命令
+config 不安全，建议关闭或者重命名
+
+3、基本使用
+- 创建字符串类型的value
+	- set  单独建立一个key
+		set k1 v1
+	- get  根据key获取值
+		get k1
+	- mset  批量创建key
+		mset k1 v1 k2 v2
+	- mget  批量获取值
+		mget k1 k2
+	- del  删除key
+        del k1
+		
+- 创建hash类型的value
+    - hset 单独设置
+        hset h1 name xiaoming
+	- hget 获取一个字段值
+        hget h1 name
+	- hmet 批量设置
+        hmet h1 name xiaoming age 22 gender male
+	- hgetall  获取全部字段的值
+        hgetall h1
+	- hdel 删除指定字段值
+	    hdel h1 name
+		
+- 创建数组类型的值
+    - lpush 从左向列表中添加数据
+	  lpush L1 v1 v2 v3
+	- rpush 从右向列表中添加数据
+	  rpush L1 r1 r2 r3
+	- lrange 查看数据中的数据，可设置起始值和终止值
+	  lrange L1 0 2
+	  lrange L1 0 -1 查询全部数据
+	- lpop 从左删除数据
+	  lpop L1 v1
+	- rpop 从右删除数据
+	  rpop L1 r3
+	  
+4、参数配置
+    - requirepass  设置密码
+	- 
